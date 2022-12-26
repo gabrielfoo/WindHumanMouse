@@ -1,10 +1,8 @@
-#NoEnv
-SendMode Input
-SetWorkingDir %A_ScriptDir%
+#include sort.ahk
+
+SendMode("Input")
 ;CoordMode Mouse, Client   ; if you use this line in your scripts, uncomment that
-SetBatchLines, -1
 SetMouseDelay -1
-Process, Priority,, H
 ;*********************************************************************************
 ;--------------------------------------------------------------------------------;
 ;  v1.5										 ;
@@ -56,8 +54,8 @@ stepVar:= maxStep
 Loop{
 	wind:= Min(wind, dist)
 	if(dist >= targetArea){
-		windX:= windX / sqrt3 + (random(round(wind) * 2 + 1) - wind) / sqrt5
-		windY:= windY / sqrt3 + (random(round(wind) * 2 + 1) - wind) / sqrt5
+		windX:= windX / sqrt3 + (random_ZeroToN(round(wind) * 2 + 1) - wind) / sqrt5
+		windY:= windY / sqrt3 + (random_ZeroToN(round(wind) * 2 + 1) - wind) / sqrt5
 		maxStep:= RandomWeight(stepVar/2, (stepVar+(stepVar/2))/2, stepVar)
 		}else{
 			windX:= windX / sqrt2
@@ -73,7 +71,7 @@ Loop{
 		veloX:= veloX + gravity * ( xe - xs ) / dist
 		veloY:= veloY + gravity * ( ye - ys ) / dist
 		if(Hypot(veloX, veloY) > maxStep){
-			randomDist:= maxStep / 2 + (Round(random(maxStep)) / 2)
+			randomDist:= maxStep / 2 + (Round(random_ZeroToN(maxStep)) / 2)
 			veloMag:= Hypot(veloX, veloY)
 			veloX:= ( veloX / veloMag ) * randomDist
 			veloY:= ( veloY / veloMag ) * randomDist
@@ -89,18 +87,18 @@ Loop{
 		newX:= Round(xs)
 		newY:= Round(ys)
 		if(oldX != newX) or (oldY != newY){
-			MouseMove, newX, newY
+			MouseMove(newX, newY)
 		}
 		step:= Hypot(xs - oldX, ys - oldY)
-		c:= sleepsArray.Count()
+		c:= sleepsArray.Length
 		if(i > c){
 			lastSleeps:= Round(sleepsArray[c])
-			Random, w, lastSleeps, lastSleeps+1
+			w := Random(lastSleeps, lastSleeps+1)
 			wait:= Max(Round(abs(w)),1)
 			Sleep(wait)
 		}else{
 			waitSleep:= Round(sleepsArray[i])
-			Random, w, waitSleep, waitSleep+1
+			w := Random(waitSleep, waitSleep+1)
 			wait:= Max(Round(abs(w)),1)
 			Sleep(wait)
 			i++
@@ -109,7 +107,7 @@ Loop{
 endX:= Round(xe)
 endY:= Round(ye)
 	if(endX != newX) or (endY != newY){
-		MouseMove, endX, endY
+		MouseMove(endX, endY)
     }
 i:= 1
 }
@@ -128,8 +126,8 @@ stepVar:= maxStep
 Loop{
     wind:= Min(wind, dist)
 		if(dist >= targetArea){
-			windX:= windX / sqrt3 + (random(round(wind) * 2 + 1) - wind) / sqrt5
-			windY:= windY / sqrt3 + (random(round(wind) * 2 + 1) - wind) / sqrt5
+			windX:= windX / sqrt3 + (random_ZeroToN(round(wind) * 2 + 1) - wind) / sqrt5
+			windY:= windY / sqrt3 + (random_ZeroToN(round(wind) * 2 + 1) - wind) / sqrt5
 			maxStep:= RandomWeight(stepVar/2, (stepVar+(stepVar/2))/2, stepVar)
         }else{
             windX:= windX / sqrt2
@@ -145,7 +143,7 @@ Loop{
         veloX:= veloX + gravity * ( xe - xs ) / dist
         veloY:= veloY + gravity * ( ye - ys ) / dist
         if(Hypot(veloX, veloY) > maxStep){
-            randomDist:= maxStep / 2 + (Round(random(maxStep)) / 2)
+            randomDist:= maxStep / 2 + (Round(random_ZeroToN(maxStep)) / 2)
             veloMag:= Hypot(veloX, veloY)
             veloX:= ( veloX / veloMag ) * randomDist
             veloY:= ( veloY / veloMag ) * randomDist
@@ -178,106 +176,79 @@ Return newArr
 Hypot(dx, dy){
     return Sqrt(dx * dx + dy * dy)
 }
-random(n){
-	random, out, 0, n
-	return % out
+random_ZeroToN(n){
+	out := Random(0, n)
+	return out
 }
 Sleep(s)
 {
-    SetBatchLines, -1
-    DllCall("QueryPerformanceFrequency", "Int64*", freq)
-    DllCall("QueryPerformanceCounter", "Int64*", CounterBefore)
+    DllCall("QueryPerformanceFrequency", "Int64*", &freq := 0)
+    DllCall("QueryPerformanceCounter", "Int64*", &CounterBefore := 0)
+    counterAfter := 0
     While (((counterAfter - CounterBefore) / freq * 1000) < s)
-        DllCall("QueryPerformanceCounter", "Int64*", CounterAfter)
+        DllCall("QueryPerformanceCounter", "Int64*", &counterAfter)
     return ((counterAfter - CounterBefore) / freq * 1000)
 }
 Muller(m,s){
-   Static i, Y
+   Static i := 0, Y := 0
    If (i := !i){
-      Random U, 0, 1.0
-      Random V, 0, 6.2831853071795862
+      U := Random(0, 1.0)
+      V := Random(0, 6.2831853071795862)
       U := sqrt(-2*ln(U))*s
       Y := m + U*sin(V)
       Return m + U*cos(V)
    }
    Return Y
 }
-SortArray(Array, Order="A"){
-    MaxIndex := ObjMaxIndex(Array)
-    If (Order = "R"){
-        count := 0
-        Loop, % MaxIndex
-            ObjInsert(Array, ObjRemove(Array, MaxIndex - count++))
-        Return
-    }
-    Partitions := "|" ObjMinIndex(Array) "," MaxIndex
-    Loop{
-        comma := InStr(this_partition := SubStr(Partitions, InStr(Partitions, "|", False, 0)+1), ",")
-        spos := pivot := SubStr(this_partition, 1, comma-1) , epos := SubStr(this_partition, comma+1)
-        if (Order = "A"){
-            Loop, % epos - spos{
-                if (Array[pivot] > Array[A_Index+spos])
-                    ObjInsert(Array, pivot++, ObjRemove(Array, A_Index+spos))
-            }
-        }else{
-            Loop, % epos - spos{
-                if (Array[pivot] < Array[A_Index+spos])
-                    ObjInsert(Array, pivot++, ObjRemove(Array, A_Index+spos))
-            }
-        }
-        Partitions := SubStr(Partitions, 1, InStr(Partitions, "|", False, 0)-1)
-        if (pivot - spos) > 1
-            Partitions .= "|" spos "," pivot-1
-        if (epos - pivot) > 1
-            Partitions .= "|" pivot+1 "," epos
-    }Until !Partitions
-}
+
 RandomWeight(min,target,max){
-Random,Rmin,min,target
-Random,Rmax,target,max
-Random,weighted,Rmin,Rmax
-Return, weighted
+Rmin := Random(min,target)
+Rmax := Random(target,max)
+weighted := Random(Rmin,Rmax)
+return weighted
 }
 goStandard(x, y, speed){
-MouseGetPos, xpos, ypos
+MouseGetPos(&xpos, &ypos)
 distance:= (Sqrt(Hypot(x-xpos,y-ypos)))*speed
+if distance = 0 ;there's nowhere to go!
+    return
 dynamicSpeed:= (1/distance)*60
-Random, finalSpeed, dynamicSpeed, dynamicSpeed + 0.8
+finalSpeed := Random(dynamicSpeed, dynamicSpeed + 0.8)
 stepArea:= Max(( finalSpeed / 2 + distance ) / 10, 0.1)
 newArr:=[]
 newArr:= WindMouse2(xpos, ypos, x, y, 10, 3, finalSpeed * 10, finalSpeed * 12, stepArea * 11, stepArea * 7)
-SortArray(newArr, "D")
-c:= newArr.Count()
+quicksort(newArr, "D")
+c:= newArr.Length
 g:= c/2
-	Loop, %g%{
+	loop(g){
 	newArr.RemoveAt(c)
 	c--
 	}
 newClone:=[]
 newClone:= newArr.Clone()
-SortArray(newClone, "A")
+quicksort(newClone, "A")
 newArr.Push(newClone*)
 WindMouse(xpos, ypos, x, y, 10, 3, finalSpeed * 10, finalSpeed * 12, stepArea * 11, stepArea * 7, newArr)
 newArr:=[]
 }
 goRelative(x, y, speed){
-MouseGetPos, xpos, ypos
+MouseGetPos(&xpos, &ypos)
 distance:= (Sqrt(Hypot((xpos+abs(x))-xpos,(ypos+abs(y))-ypos)))*speed
 dynamicSpeed:= (1/distance)*60
-Random, finalSpeed, dynamicSpeed, dynamicSpeed + 0.8
+finalSpeed := Random(dynamicSpeed, dynamicSpeed + 0.8)
 stepArea:= Max(( finalSpeed / 2 + distance ) / 10, 0.1)
 newArr:=[]
 newArr:= WindMouse2(xpos, ypos, xpos+x, ypos+y, 10, 3, finalSpeed * 10, finalSpeed * 12, stepArea * 11, stepArea * 7)
-SortArray(newArr, "D")
-c:= newArr.Count()
+quicksort(newArr, "D")
+c:= newArr.Length
 g:= c/2
-	Loop, %g%{
+	Loop(g){
 	newArr.RemoveAt(c)
 	c--
 	}
 newClone:=[]
 newClone:= newArr.Clone()
-SortArray(newClone, "A")
+quicksort(newClone, "A")
 WindMouse(xpos, ypos, xpos+x, ypos+y, 10, 3, finalSpeed * 10, finalSpeed * 12, stepArea * 11, stepArea * 7, newArr)
 newArr:=[]
 }
